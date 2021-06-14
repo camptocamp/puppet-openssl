@@ -1,5 +1,6 @@
 require 'spec_helper'
 
+# rubocop:disable RSpec/MessageSpies
 describe 'cert_aia_caissuers' do
   it { is_expected.not_to eq(nil) }
 
@@ -24,7 +25,7 @@ describe 'cert_aia_caissuers' do
   context 'when the argument is correct' do
     let(:cert) { OpenSSL::X509::Certificate.new }
 
-    before(:each) do
+    before do
       allow(File).to receive(:read).and_return('foo')
     end
 
@@ -39,7 +40,7 @@ describe 'cert_aia_caissuers' do
       aia = extension_factory.create_extension(
         'authorityInfoAccess',
         'caIssuers;URI:http://ca.example.org/cer',
-        false,
+        false
       )
       cert.add_extension(aia)
       is_expected.to run.with_params('/path/to/cert').and_return('http://ca.example.org/cer')
