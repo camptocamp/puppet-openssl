@@ -1,4 +1,5 @@
 require 'pp'
+require 'common'
 
 Puppet::Type.type(:cert_file).provide :posix do
   confine feature: :posix
@@ -11,18 +12,18 @@ Puppet::Type.type(:cert_file).provide :posix do
     return false unless cert_format?(localcert_file, resource[:format])
     localcert = OpenSSL::X509::Certificate.new(localcert_file)
     debug "File parsed as #{localcert.pretty_inspect}"
-    localcert == remotecert
+    localcert == remotecert(resource[:source])
   end
 
   def create
     case resource[:format]
     when :pem
       File.open(resource[:path], 'wt') do |localcert_file|
-        localcert_file.write(remotecert.to_pem)
+        localcert_file.write(remotecert(resource[:source]).to_pem)
       end
     when :der
       File.open(resource[:path], 'wb') do |localcert_file|
-        localcert_file.write(remotecert.to_der)
+        localcert_file.write(remotecert(resource[:source]).to_der)
       end
     else
       raise ArgumentError, 'Output format not implemented.'
@@ -34,21 +35,6 @@ Puppet::Type.type(:cert_file).provide :posix do
   end
 
   private
-
-  def remotecert
-    cert = nil
-    Puppet.runtime[:http].get(URI(resource[:source])) do |response|
-      if response.success?
-        response.read_body do |data|
-          cert = OpenSSL::X509::Certificate.new(data)
-          debug "Certificate from #{resource[:source]} parsed as #{cert.pretty_inspect}"
-        end
-      else
-        debug "Failed to get certificate: #{response.code} - #{response.reason}"
-      end
-    end
-    cert
-  end
 
   def cert_format?(blob, format)
     OpenSSL::X509::Certificate.new(blob)
